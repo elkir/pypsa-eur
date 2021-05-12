@@ -313,7 +313,7 @@ rule solve_network:
         python="logs/solve_network/elec_s{simpl}_{clusters}_ec_l{ll}_{opts}_python.log",
         memory="logs/solve_network/elec_s{simpl}_{clusters}_ec_l{ll}_{opts}_memory.log"
     benchmark: "benchmarks/solve_network/elec_s{simpl}_{clusters}_ec_l{ll}_{opts}"
-    threads: 4
+    threads: 8 # originally 4
     resources: mem=memory
     shadow: "shallow"
     script: "scripts/solve_network.py"
@@ -364,8 +364,8 @@ def input_make_summary(w):
 
 rule make_summary:
     input: input_make_summary
-    output: directory("results/summaries/elec_s{simpl}_{clusters}_ec_l{ll}_{opts}_{country}")
-    log: "logs/make_summary/elec_s{simpl}_{clusters}_ec_l{ll}_{opts}_{country}.log",
+    output: directory("results/summaries/{network}_s{simpl}_{clusters}_ec_l{ll}_{opts}_{country}")
+    log: "logs/make_summary/{network}_s{simpl}_{clusters}_ec_l{ll}_{opts}_{country}.log",
     script: "scripts/make_summary.py"
 
 

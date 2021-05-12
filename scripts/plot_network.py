@@ -19,6 +19,11 @@ Description
 
 """
 
+## DEBUG
+# import debugpy
+# debugpy.listen(5678)
+# # debugpy.wait_for_client()
+
 import logging
 from _helpers import (load_network_for_plots, aggregate_p, aggregate_costs,
                       configure_logging)
@@ -32,7 +37,7 @@ import matplotlib.pyplot as plt
 import matplotlib as mpl
 from matplotlib.patches import Circle, Ellipse
 from matplotlib.legend_handler import HandlerPatch
-to_rgba = mpl.colors.colorConverter.to_rgba
+to_rgba = mpl.colors.to_rgba
 
 logger = logging.getLogger(__name__)
 
@@ -79,7 +84,7 @@ def set_plot_style():
 def plot_map(n, ax=None, attribute='p_nom', opts={}):
     if ax is None:
         ax = plt.gca()
-
+        
     ## DATA
     line_colors = {'cur': "purple",
                    'exp': mpl.colors.rgb2hex(to_rgba("red", 0.7), True)}
@@ -104,19 +109,23 @@ def plot_map(n, ax=None, attribute='p_nom', opts={}):
     ## FORMAT
     linewidth_factor = opts['map'][attribute]['linewidth_factor']
     bus_size_factor  = opts['map'][attribute]['bus_size_factor']
-
+    
     ## PLOT
-    n.plot(line_widths=pd.concat(line_widths_exp)/linewidth_factor,
-           line_colors=dict(Line=line_colors['exp'], Link=line_colors['exp']),
+    n.plot(line_widths=line_widths_exp["Line"]/linewidth_factor,
+           line_colors=line_colors['exp'],
+           link_widths=line_widths_exp["Link"]/linewidth_factor,
+           link_colors=line_colors['exp'],
            bus_sizes=bus_sizes/bus_size_factor,
            bus_colors=tech_colors,
            boundaries=map_boundaries,
            geomap=True,
            ax=ax)
-    n.plot(line_widths=pd.concat(line_widths_cur)/linewidth_factor,
-           line_colors=pd.concat(line_colors_with_alpha),
+    n.plot(line_widths=line_widths_cur["Line"]/linewidth_factor,
+           line_colors=line_colors_with_alpha["Line"],
+           link_widths=line_widths_cur["Link"]/linewidth_factor,
+           link_colors=line_colors_with_alpha["Link"],
            bus_sizes=0,
-           bus_colors=tech_colors,
+        #    bus_colors=tech_colors,
            boundaries=map_boundaries,
            geomap=False,
            ax=ax)
