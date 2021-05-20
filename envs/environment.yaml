@@ -58,3 +58,4 @@ dependencies:
     - git+https://github.com/PyPSA/glaes.git#egg=glaes
     - git+https://github.com/PyPSA/geokit.git#egg=geokit
     - cdsapi
+    - modin>=0.8
