@@ -1,6 +1,6 @@
 # SPDX-FileCopyrightText: : 2017-2020 The PyPSA-Eur Authors
 #
-# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-License-Identifier: MIT
 
 """
 Rasters the vector data of the `Natura 2000 <https://en.wikipedia.org/wiki/Natura_2000>`_ natural protection areas onto all cutout regions.
@@ -73,7 +73,6 @@ if __name__ == "__main__":
         snakemake = mock_snakemake('build_natura_raster')
     configure_logging(snakemake)
 
-
     cutouts = snakemake.input.cutouts
     xs, Xs, ys, Ys = zip(*(determine_cutout_xXyY(cutout) for cutout in cutouts))
     bounds = transform_bounds(4326, 3035, min(xs), min(ys), max(Xs), max(Ys))
@@ -88,4 +87,3 @@ if __name__ == "__main__":
                   count=1, transform=transform, crs=3035, compress='lzw',
                   width=raster.shape[1], height=raster.shape[0]) as dst:
         dst.write(raster, indexes=1)
-

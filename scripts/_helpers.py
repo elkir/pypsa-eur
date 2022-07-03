@@ -1,10 +1,12 @@
 # SPDX-FileCopyrightText: : 2017-2020 The PyPSA-Eur Authors
 #
-# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-License-Identifier: MIT
 
 import pandas as pd
 from pathlib import Path
+from collections import OrderedDict
 
+REGION_COLS = ['geometry', 'name', 'x', 'y', 'country']
 
 def configure_logging(snakemake, skip_handlers=False):
     """
@@ -119,11 +121,19 @@ def load_network_for_plots(fn, tech_costs, config, combine_hydro_ps=True):
     # bus_carrier = n.storage_units.bus.map(n.buses.carrier)
     # n.storage_units.loc[bus_carrier == "heat","carrier"] = "water tanks"
 
-    Nyears = n.snapshot_weightings.sum() / 8760.
-    costs = load_costs(Nyears, tech_costs, config['costs'], config['electricity'])
+    Nyears = n.snapshot_weightings.objective.sum() / 8760.
+    costs = load_costs(tech_costs, config['costs'], config['electricity'], Nyears)
     update_transmission_costs(n, costs)
 
     return n
+
+def update_p_nom_max(n):
+    # if extendable carriers (solar/onwind/...) have capacity >= 0,
+    # e.g. existing assets from the OPSD project are included to the network,
+    # the installed capacity might exceed the expansion limit.
+    # Hence, we update the assumptions.
+    
+    n.generators.p_nom_max = n.generators[['p_nom_min', 'p_nom_max']].max(1)
 
 def aggregate_p_nom(n):
     return pd.concat([
@@ -202,6 +212,22 @@ def progress_retrieve(url, file):
 
     urllib.request.urlretrieve(url, file, reporthook=dlProgress)
 
+def get_aggregation_strategies(aggregation_strategies):
+    # default aggregation strategies that cannot be defined in .yaml format must be specified within
+    # the function, otherwise (when defaults are passed in the function's definition) they get lost
+    # when custom values are specified in the config.
+
+    import numpy as np
+    from pypsa.networkclustering import _make_consense
+
+    bus_strategies = dict(country=_make_consense("Bus", "country"))
+    bus_strategies.update(aggregation_strategies.get("buses", {}))
+
+    generator_strategies = {'build_year': lambda x: 0, 'lifetime': lambda x: np.inf}
+    generator_strategies.update(aggregation_strategies.get("generators", {}))
+
+    return bus_strategies, generator_strategies
+
 
 def mock_snakemake(rulename, **wildcards):
     """
@@ -223,6 +249,7 @@ def mock_snakemake(rulename, **wildcards):
     import os
     from pypsa.descriptors import Dict
     from snakemake.script import Snakemake
+    from packaging.version import Version, parse
 
     script_dir = Path(__file__).parent.resolve()
     assert Path.cwd().resolve() == script_dir, \
@@ -232,7 +259,8 @@ def mock_snakemake(rulename, **wildcards):
         if os.path.exists(p):
             snakefile = p
             break
-    workflow = sm.Workflow(snakefile)
+    kwargs = dict(rerun_triggers=[]) if parse(sm.__version__) > Version("7.7.0") else {}
+    workflow = sm.Workflow(snakefile, overwrite_configfiles=[], **kwargs)
     workflow.include(snakefile)
     workflow.global_resources = {}
     rule = workflow.get_rule(rulename)

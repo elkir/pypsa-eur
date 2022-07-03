@@ -1,9 +1,9 @@
 # SPDX-FileCopyrightText: : 2017-2020 The PyPSA-Eur Authors
 #
-# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-License-Identifier: MIT
 
 from os.path import normpath, exists
-from shutil import copyfile
+from shutil import copyfile, move
 
 from snakemake.remote.HTTP import RemoteProvider as HTTPRemoteProvider
 HTTP = HTTPRemoteProvider()
@@ -15,7 +15,6 @@ configfile: "config.yaml"
 
 COSTS="data/costs.csv"
 ATLITE_NPROCESSES = config['atlite'].get('nprocesses', 4)
-
 
 wildcard_constraints:
     simpl="[a-zA-Z0-9]*|all",
@@ -45,12 +44,12 @@ if config['enable'].get('prepare_links_p_nom', False):
         output: 'data/links_p_nom.csv'
         log: 'logs/prepare_links_p_nom.log'
         threads: 1
-        resources: mem=500
+        resources: mem_mb=500
         script: 'scripts/prepare_links_p_nom.py'
 
 
 datafiles = ['ch_cantons.csv', 'je-e-21.03.02.xls', 
-            'eez/World_EEZ_v8_2014.shp', 'EIA_hydro_generation_2000_2014.csv', 
+            'eez/World_EEZ_v8_2014.shp', 
             'hydro_capacities.csv', 'naturalearth/ne_10m_admin_0_countries.shp', 
             'NUTS_2013_60M_SH/data/NUTS_RG_60M_2013.shp', 'nama_10r_3popgdp.tsv.gz', 
             'nama_10r_3gdp.tsv.gz', 'corine/g250_clc06_V18_5.tif']
@@ -67,7 +66,14 @@ if config['enable'].get('retrieve_databundle', True):
         script: 'scripts/retrieve_databundle.py'
 
 
+rule retrieve_load_data:
+    input: HTTP.remote("data.open-power-system-data.org/time_series/2019-06-05/time_series_60min_singleindex.csv", keep_local=True, static=True)
+    output: "data/load_raw.csv"
+    run: move(input[0], output[0])
+
+
 rule build_load_data:
+    input: "data/load_raw.csv"
     output: "resources/load.csv"
     log: "logs/build_load_data.log"
     script: 'scripts/build_load_data.py'
@@ -80,7 +86,7 @@ rule build_powerplants:
     output: "resources/powerplants.csv"
     log: "logs/build_powerplants.log"
     threads: 1
-    resources: mem=500
+    resources: mem_mb=500
     script: "scripts/build_powerplants.py"
 
 
@@ -101,7 +107,7 @@ rule base_network:
     log: "logs/base_network.log"
     benchmark: "benchmarks/base_network"
     threads: 1
-    resources: mem=500
+    resources: mem_mb=500
     script: "scripts/base_network.py"
 
 
@@ -121,7 +127,7 @@ rule build_shapes:
         nuts3_shapes='resources/nuts3_shapes.geojson'
     log: "logs/build_shapes.log"
     threads: 1
-    resources: mem=500
+    resources: mem_mb=500
     script: "scripts/build_shapes.py"
 
 
@@ -135,7 +141,7 @@ rule build_bus_regions:
         regions_offshore="resources/regions_offshore.geojson"
     log: "logs/build_bus_regions.log"
     threads: 1
-    resources: mem=1000
+    resources: mem_mb=1000
     script: "scripts/build_bus_regions.py"
 
 if config['enable'].get('build_cutout', False):
@@ -147,15 +153,15 @@ if config['enable'].get('build_cutout', False):
         log: "logs/build_cutout/{cutout}.log"
         benchmark: "benchmarks/build_cutout_{cutout}"
         threads: ATLITE_NPROCESSES
-        resources: mem=ATLITE_NPROCESSES * 1000
+        resources: mem_mb=ATLITE_NPROCESSES * 1000
         script: "scripts/build_cutout.py"
 
 
 if config['enable'].get('retrieve_cutout', True):
     rule retrieve_cutout:
-        input: HTTP.remote("zenodo.org/record/4709858/files/{cutout}.nc", keep_local=True)
+        input: HTTP.remote("zenodo.org/record/6382570/files/{cutout}.nc", keep_local=True, static=True)
         output: "cutouts/{cutout}.nc"
-        shell: "mv {input} {output}"
+        run: move(input[0], output[0])
 
 
 if config['enable'].get('build_natura_raster', False):
@@ -170,16 +176,18 @@ if config['enable'].get('build_natura_raster', False):
 
 if config['enable'].get('retrieve_natura_raster', True):
     rule retrieve_natura_raster:
-        input: HTTP.remote("zenodo.org/record/4706686/files/natura.tiff", keep_local=True)
+        input: HTTP.remote("zenodo.org/record/4706686/files/natura.tiff", keep_local=True, static=True)
         output: "resources/natura.tiff"
-        shell: "mv {input} {output}"
+        run: move(input[0], output[0])
 
 
 rule build_renewable_profiles:
     input:
         base_network="networks/base.nc",
         corine="data/bundle/corine/g250_clc06_V18_5.tif",
-        natura="resources/natura.tiff",
+        natura=lambda w: ("resources/natura.tiff"
+                          if config["renewable"][w.technology]["natura"]
+                          else []),
         gebco=lambda w: ("data/bundle/GEBCO_2014_2D.nc"
                          if "max_depth" in config["renewable"][w.technology].keys()
                          else []),
@@ -193,20 +201,20 @@ rule build_renewable_profiles:
     log: "logs/build_renewable_profile_{technology}.log"
     benchmark: "benchmarks/build_renewable_profiles_{technology}"
     threads: ATLITE_NPROCESSES
-    resources: mem=ATLITE_NPROCESSES * 5000
+    resources: mem_mb=ATLITE_NPROCESSES * 5000
+    wildcard_constraints: technology="(?!hydro).*" # Any technology other than hydro
     script: "scripts/build_renewable_profiles.py"
 
 
-if 'hydro' in config['renewable'].keys():
-    rule build_hydro_profile:
-        input:
-            country_shapes='resources/country_shapes.geojson',
-            eia_hydro_generation='data/bundle/EIA_hydro_generation_2000_2014.csv',
-            cutout="cutouts/" + config["renewable"]['hydro']['cutout'] + ".nc"
-        output: 'resources/profile_hydro.nc'
-        log: "logs/build_hydro_profile.log"
-        resources: mem=5000
-        script: 'scripts/build_hydro_profile.py'
+rule build_hydro_profile:
+    input:
+        country_shapes='resources/country_shapes.geojson',
+        eia_hydro_generation='data/eia_hydro_annual_generation.csv',
+        cutout=f"cutouts/{config['renewable']['hydro']['cutout']}.nc" if "hydro" in config["renewable"] else "config['renewable']['hydro']['cutout'] not configured",
+    output: 'resources/profile_hydro.nc'
+    log: "logs/build_hydro_profile.log"
+    resources: mem_mb=5000
+    script: 'scripts/build_hydro_profile.py'
 
 
 rule add_electricity:
@@ -220,12 +228,13 @@ rule add_electricity:
         load='resources/load.csv',
         nuts3_shapes='resources/nuts3_shapes.geojson',
         **{f"profile_{tech}": f"resources/profile_{tech}.nc"
-           for tech in config['renewable']}
+           for tech in config['renewable']},
+        **{f"conventional_{carrier}_{attr}": fn for carrier, d in config.get('conventional', {None: {}}).items() for attr, fn in d.items() if str(fn).startswith("data/")}, 
     output: "networks/elec.nc"
     log: "logs/add_electricity.log"
     benchmark: "benchmarks/add_electricity"
     threads: 1
-    resources: mem=3000
+    resources: mem_mb=5000
     script: "scripts/add_electricity.py"
 
 
@@ -239,11 +248,12 @@ rule simplify_network:
         network='networks/elec_s{simpl}.nc',
         regions_onshore="resources/regions_onshore_elec_s{simpl}.geojson",
         regions_offshore="resources/regions_offshore_elec_s{simpl}.geojson",
-        busmap='resources/busmap_elec_s{simpl}.csv'
+        busmap='resources/busmap_elec_s{simpl}.csv',
+        connection_costs='resources/connection_costs_s{simpl}.csv'
     log: "logs/simplify_network/elec_s{simpl}.log"
     benchmark: "benchmarks/simplify_network/elec_s{simpl}"
     threads: 1
-    resources: mem=4000
+    resources: mem_mb=4000
     script: "scripts/simplify_network.py"
 
 
@@ -265,7 +275,7 @@ rule cluster_network:
     log: "logs/cluster_network/elec_s{simpl}_{clusters}.log"
     benchmark: "benchmarks/cluster_network/elec_s{simpl}_{clusters}"
     threads: 1
-    resources: mem=3000
+    resources: mem_mb=6000
     script: "scripts/cluster_network.py"
 
 
@@ -277,7 +287,7 @@ rule add_extra_components:
     log: "logs/add_extra_components/elec_s{simpl}_{clusters}.log"
     benchmark: "benchmarks/add_extra_components/elec_s{simpl}_{clusters}_ec"
     threads: 1
-    resources: mem=3000
+    resources: mem_mb=3000
     script: "scripts/add_extra_components.py"
 
 
@@ -287,7 +297,7 @@ rule prepare_network:
     log: "logs/prepare_network/elec_s{simpl}_{clusters}_ec_l{ll}_{opts}.log"
     benchmark: "benchmarks/prepare_network/elec_s{simpl}_{clusters}_ec_l{ll}_{opts}"
     threads: 1
-    resources: mem=4000
+    resources: mem_mb=4000
     script: "scripts/prepare_network.py"
 
 
@@ -305,6 +315,8 @@ def memory(w):
             break
     if w.clusters.endswith('m'):
         return int(factor * (18000 + 180 * int(w.clusters[:-1])))
+    elif w.clusters == "all":
+        return int(factor * (18000 + 180 * 4000))
     else:
         return int(factor * (10000 + 195 * int(w.clusters)))
 
@@ -318,8 +330,8 @@ rule solve_network:
         memory="logs/solve_network/elec_s{simpl}_{clusters}_ec_l{ll}_{opts}_memory.log"
     benchmark: "benchmarks/solve_network/elec_s{simpl}_{clusters}_ec_l{ll}_{opts}"
     threads: 4
-    resources: mem=memory
-    shadow: "shallow"
+    resources: mem_mb=memory
+    shadow: "minimal"
     script: "scripts/solve_network.py"
 
 
@@ -334,8 +346,8 @@ rule solve_operations_network:
         memory="logs/solve_operations_network/elec_s{simpl}_{clusters}_ec_l{ll}_{opts}_op_memory.log"
     benchmark: "benchmarks/solve_operations_network/elec_s{simpl}_{clusters}_ec_l{ll}_{opts}"
     threads: 4
-    resources: mem=(lambda w: 5000 + 372 * int(w.clusters))
-    shadow: "shallow"
+    resources: mem_mb=(lambda w: 5000 + 372 * int(w.clusters))
+    shadow: "minimal"
     script: "scripts/solve_operations_network.py"
 
 
@@ -360,7 +372,6 @@ def input_make_summary(w):
         ll = w.ll
     return ([COSTS] +
             expand("results/networks/elec_s{simpl}_{clusters}_ec_l{ll}_{opts}.nc",
-                   network=w.network,
                    ll=ll,
                    **{k: config["scenario"][k] if getattr(w, k) == "all" else getattr(w, k)
                       for k in ["simpl", "clusters", "opts"]}))
@@ -381,7 +392,7 @@ rule plot_summary:
 
 
 def input_plot_p_nom_max(w):
-    return [("networks/elec_s{simpl}{maybe_cluster}.nc"
+    return [("results/networks/elec_s{simpl}{maybe_cluster}.nc"
              .format(maybe_cluster=('' if c == 'full' else ('_' + c)), **w))
             for c in w.clusts.split(",")]
 

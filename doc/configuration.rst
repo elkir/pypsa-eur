@@ -18,7 +18,8 @@ Top-level configuration
 
 .. literalinclude:: ../config.default.yaml
    :language: yaml
-   :lines: 5-12,20,27-34
+   :lines: 5-12,20,31-38
+
 
 .. csv-table::
    :header-rows: 1
@@ -50,7 +51,8 @@ An exemplary dependency graph (starting from the simplification rules) then look
 
 .. literalinclude:: ../config.default.yaml
    :language: yaml
-   :lines: 14-18
+   :start-at: scenario:
+   :end-before: countries:
 
 .. csv-table::
    :header-rows: 1
@@ -66,7 +68,8 @@ Specifies the temporal range to build an energy system model for as arguments to
 
 .. literalinclude:: ../config.default.yaml
    :language: yaml
-   :lines: 22-25
+   :start-at: snapshots:
+   :end-before: enable:
 
 .. csv-table::
    :header-rows: 1
@@ -80,20 +83,18 @@ Specifies the temporal range to build an energy system model for as arguments to
 
 .. literalinclude:: ../config.default.yaml
    :language: yaml
-   :lines: 36-60
+   :start-at: electricity:
+   :end-before: atlite:
 
 .. csv-table::
    :header-rows: 1
    :widths: 25,7,22,30
    :file: configtables/electricity.csv
 
-.. warning::
-    Carriers in ``conventional_carriers`` must not also be in ``extendable_carriers``.
-
 .. _atlite_cf:
 
 ``atlite``
-=============
+==========
 
 Define and specify the ``atlite.Cutout`` used for calculating renewable potentials and time-series. All options except for ``features`` are directly used as `cutout parameters <https://atlite.readthedocs.io/en/latest/ref_api.html#cutout>`_.
 
@@ -117,7 +118,8 @@ Define and specify the ``atlite.Cutout`` used for calculating renewable potentia
 
 .. literalinclude:: ../config.default.yaml
    :language: yaml
-   :lines: 77-94
+   :start-at: renewable:
+   :end-before:   offwind-ac:
 
 .. csv-table::
    :header-rows: 1
@@ -129,7 +131,8 @@ Define and specify the ``atlite.Cutout`` used for calculating renewable potentia
 
 .. literalinclude:: ../config.default.yaml
    :language: yaml
-   :lines: 77,95-107
+   :start-at:   offwind-ac:
+   :end-before:   offwind-dc:
 
 .. csv-table::
    :header-rows: 1
@@ -141,7 +144,8 @@ Define and specify the ``atlite.Cutout`` used for calculating renewable potentia
 
 .. literalinclude:: ../config.default.yaml
    :language: yaml
-   :lines: 77,108-121
+   :start-at:   offwind-dc:
+   :end-before:   solar:
 
 .. csv-table::
    :header-rows: 1
@@ -153,7 +157,8 @@ Define and specify the ``atlite.Cutout`` used for calculating renewable potentia
 
 .. literalinclude:: ../config.default.yaml
    :language: yaml
-   :lines: 77,122-141
+   :start-at:   solar:
+   :end-before:   hydro:
 
 .. csv-table::
    :header-rows: 1
@@ -165,7 +170,8 @@ Define and specify the ``atlite.Cutout`` used for calculating renewable potentia
 
 .. literalinclude:: ../config.default.yaml
    :language: yaml
-   :lines: 77,142-147
+   :start-at:   hydro:
+   :end-before: conventional:
 
 .. csv-table::
    :header-rows: 1
@@ -174,12 +180,24 @@ Define and specify the ``atlite.Cutout`` used for calculating renewable potentia
 
 .. _lines_cf:
 
+``conventional``
+=============
+
+Define additional generator attribute for conventional carrier types. If a scalar value is given it is applied to all generators. However if a string starting with "data/" is given, the value is interpreted as a path to a csv file with country specific values. Then, the values are read in and applied to all generators of the given carrier in the given country. Note that the value(s) overwrite the existing values in the corresponding section of the ``generators`` dataframe.   
+
+.. literalinclude:: ../config.default.yaml
+   :language: yaml
+   :start-at:   conventional:
+   :end-before: lines:
+
+
 ``lines``
 =============
 
 .. literalinclude:: ../config.default.yaml
    :language: yaml
-   :lines: 149-157
+   :start-at: lines:
+   :end-before: links:
 
 .. csv-table::
    :header-rows: 1
@@ -193,7 +211,8 @@ Define and specify the ``atlite.Cutout`` used for calculating renewable potentia
 
 .. literalinclude:: ../config.default.yaml
    :language: yaml
-   :lines: 159-163
+   :start-at: links:
+   :end-before: transformers:
 
 .. csv-table::
    :header-rows: 1
@@ -207,7 +226,8 @@ Define and specify the ``atlite.Cutout`` used for calculating renewable potentia
 
 .. literalinclude:: ../config.default.yaml
    :language: yaml
-   :lines: 165-168
+   :start-at: transformers:
+   :end-before: load:
 
 .. csv-table::
    :header-rows: 1
@@ -221,7 +241,8 @@ Define and specify the ``atlite.Cutout`` used for calculating renewable potentia
 
 .. literalinclude:: ../config.default.yaml
    :language: yaml
-   :lines: 170-176
+   :start-at: load:
+   :end-before: costs:
 
 .. csv-table::
    :header-rows: 1
@@ -235,7 +256,8 @@ Define and specify the ``atlite.Cutout`` used for calculating renewable potentia
 
 .. literalinclude:: ../config.default.yaml
    :language: yaml
-   :lines: 178-190
+   :start-after: scaling_factor:
+   :end-before: solving:
 
 .. csv-table::
    :header-rows: 1
@@ -256,7 +278,8 @@ Define and specify the ``atlite.Cutout`` used for calculating renewable potentia
 
 .. literalinclude:: ../config.default.yaml
    :language: yaml
-   :lines: 192-202
+   :start-at: solving:
+   :end-before:   solver:
 
 .. csv-table::
    :header-rows: 1
@@ -268,7 +291,8 @@ Define and specify the ``atlite.Cutout`` used for calculating renewable potentia
 
 .. literalinclude:: ../config.default.yaml
    :language: yaml
-   :lines: 192,203-219
+   :start-at:   solver:
+   :end-before: plotting:
 
 .. csv-table::
    :header-rows: 1
@@ -282,7 +306,7 @@ Define and specify the ``atlite.Cutout`` used for calculating renewable potentia
 
 .. literalinclude:: ../config.default.yaml
    :language: yaml
-   :lines: 221-299
+   :start-at: plotting:
 
 .. csv-table::
    :header-rows: 1

@@ -1,6 +1,6 @@
 # SPDX-FileCopyrightText: : 2017-2020 The PyPSA-Eur Authors
 #
-# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-License-Identifier: MIT
 
 """
 Solves linear optimal dispatch in hourly resolution
@@ -81,10 +81,15 @@ def set_parameters_from_optimized(n, n_optim):
         n_optim.generators['p_nom_opt'].reindex(gen_extend_i, fill_value=0.)
     n.generators.loc[gen_extend_i, 'p_nom_extendable'] = False
 
-    stor_extend_i = n.storage_units.index[n.storage_units.p_nom_extendable]
-    n.storage_units.loc[stor_extend_i, 'p_nom'] = \
-        n_optim.storage_units['p_nom_opt'].reindex(stor_extend_i, fill_value=0.)
-    n.storage_units.loc[stor_extend_i, 'p_nom_extendable'] = False
+    stor_units_extend_i = n.storage_units.index[n.storage_units.p_nom_extendable]
+    n.storage_units.loc[stor_units_extend_i, 'p_nom'] = \
+        n_optim.storage_units['p_nom_opt'].reindex(stor_units_extend_i, fill_value=0.)
+    n.storage_units.loc[stor_units_extend_i, 'p_nom_extendable'] = False
+
+    stor_extend_i = n.stores.index[n.stores.e_nom_extendable]
+    n.stores.loc[stor_extend_i, 'e_nom'] = \
+        n_optim.stores['e_nom_opt'].reindex(stor_extend_i, fill_value=0.)
+    n.stores.loc[stor_extend_i, 'e_nom_extendable'] = False
 
     return n
 
@@ -104,15 +109,13 @@ if __name__ == "__main__":
     n = set_parameters_from_optimized(n, n_optim)
     del n_optim
 
-    config = snakemake.config
     opts = snakemake.wildcards.opts.split('-')
-    config['solving']['options']['skip_iterations'] = False
+    snakemake.config['solving']['options']['skip_iterations'] = False
 
     fn = getattr(snakemake.log, 'memory', None)
     with memory_logger(filename=fn, interval=30.) as mem:
-        n = prepare_network(n, solve_opts=snakemake.config['solving']['options'])
-        n = solve_network(n, config=config, opts=opts,
-                          solver_dir=tmpdir,
+        n = prepare_network(n, snakemake.config['solving']['options'])
+        n = solve_network(n, snakemake.config, opts, solver_dir=tmpdir,
                           solver_logfile=snakemake.log.solver)
         n.export_to_netcdf(snakemake.output[0])
 

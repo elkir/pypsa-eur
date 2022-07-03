@@ -2,14 +2,13 @@
 #
 # SPDX-License-Identifier: CC0-1.0
 
-version: 0.3.0
+version: 0.4.0
 tutorial: true
 
 logging:
   level: INFO
   format: '%(levelname)s:%(name)s:%(message)s'
 
-summary_dir: results
 
 scenario:
   simpl: ['']
@@ -17,7 +16,7 @@ scenario:
   clusters: [5]
   opts: [Co2L-24H]
 
-countries: ['DE']
+countries: ['BE']
 
 snapshots:
   start: "2013-03-01"
@@ -54,7 +53,7 @@ electricity:
 atlite:
   nprocesses: 4
   cutouts:
-    europe-2013-era5-tutorial:
+    be-03-2013-era5:
       module: era5
       x: [4., 15.]
       y: [46., 56.]
@@ -62,7 +61,7 @@ atlite:
 
 renewable:
   onwind:
-    cutout: europe-2013-era5-tutorial
+    cutout: be-03-2013-era5
     resource:
       method: wind
       turbine: Vestas_V112_3MW
@@ -79,7 +78,7 @@ renewable:
     potential: simple # or conservative
     clip_p_max_pu: 1.e-2
   offwind-ac:
-    cutout: europe-2013-era5-tutorial
+    cutout: be-03-2013-era5
     resource:
       method: wind
       turbine: NREL_ReferenceTurbine_5MW_offshore
@@ -91,7 +90,7 @@ renewable:
     potential: simple # or conservative
     clip_p_max_pu: 1.e-2
   offwind-dc:
-    cutout: europe-2013-era5-tutorial
+    cutout: be-03-2013-era5
     resource:
       method: wind
       turbine: NREL_ReferenceTurbine_5MW_offshore
@@ -104,7 +103,7 @@ renewable:
     potential: simple # or conservative
     clip_p_max_pu: 1.e-2
   solar:
-    cutout: europe-2013-era5-tutorial
+    cutout: be-03-2013-era5
     resource:
       method: pv
       panel: CSi
@@ -112,12 +111,13 @@ renewable:
         slope: 35.
         azimuth: 180.
     capacity_per_sqkm: 1.7 # ScholzPhd Tab 4.3.1: 170 MW/km^2
-    # Determined by comparing uncorrected area-weighted full-load hours to those
+    # Correction factor determined by comparing uncorrected area-weighted full-load hours to those
     # published in Supplementary Data to
     # Pietzcker, Robert Carl, et al. "Using the sun to decarbonize the power
     # sector: The economic potential of photovoltaics and concentrating solar
     # power." Applied Energy 135 (2014): 704-720.
-    correction_factor: 0.854337
+    # This correction factor of 0.854337 may be in order if using reanalysis data.
+    # correction_factor: 0.854337
     corine: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13,
              14, 15, 16, 17, 18, 19, 20, 26, 31, 32]
     natura: true
@@ -146,7 +146,6 @@ transformers:
   type: ''
 
 load:
-  url: https://data.open-power-system-data.org/time_series/2019-06-05/time_series_60min_singleindex.csv
   power_statistics: True # only for files from <2019; set false in order to get ENTSOE transparency data 
   interpolate_limit: 3 # data gaps up until this size are interpolated linearly
   time_shift_for_large_gaps: 1w # data gaps up until this size are copied by copying from 
@@ -165,6 +164,25 @@ costs:
     battery: 0.
   emission_prices: # in currency per tonne emission, only used with the option Ep
     co2: 0.
+
+clustering:
+  simplify_network:
+    to_substations: false # network is simplified to nodes with positive or negative power injection (i.e. substations or offwind connections)
+    algorithm: kmeans # choose from: [hac, kmeans]
+    feature: solar+onwind-time # only for hac. choose from: [solar+onwind-time, solar+onwind-cap, solar-time, solar-cap, solar+offwind-cap] etc.
+  cluster_network:
+    algorithm: kmeans
+    feature: solar+onwind-time
+  aggregation_strategies:
+    generators:
+      p_nom_max: sum # use "min" for more conservative assumptions
+      p_nom_min: sum
+      p_min_pu: mean
+      marginal_cost: mean
+      committable: any
+      ramp_limit_up: max
+      ramp_limit_down: max
+      efficiency: mean
 
 solving:
   options:

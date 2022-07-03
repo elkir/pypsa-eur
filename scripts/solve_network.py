@@ -1,6 +1,6 @@
 # SPDX-FileCopyrightText: : 2017-2020 The PyPSA-Eur Authors
 #
-# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-License-Identifier: MIT
 
 """
 Solves linear optimal power flow for a network iteratively while updating reactances.
@@ -84,8 +84,9 @@ import pandas as pd
 import re
 
 import pypsa
-from pypsa.linopf import (get_var, define_constraints, linexpr, join_exprs,
-                          network_lopf, ilopf)
+from pypsa.linopf import (get_var, define_constraints, define_variables,
+                          linexpr, join_exprs, network_lopf, ilopf)
+from pypsa.descriptors import get_switchable_as_dense as get_as_dense
 
 from pathlib import Path
 from vresutils.benchmark import memory_logger
@@ -99,16 +100,19 @@ def prepare_network(n, solve_opts):
         for df in (n.generators_t.p_max_pu, n.storage_units_t.inflow):
             df.where(df>solve_opts['clip_p_max_pu'], other=0., inplace=True)
 
-    if solve_opts.get('load_shedding'):
-        n.add("Carrier", "Load")
-        n.madd("Generator", n.buses.index, " load",
-               bus=n.buses.index,
+    load_shedding = solve_opts.get('load_shedding')
+    if load_shedding:
+        n.add("Carrier", "load", color="#dd2e23", nice_name="Load shedding")
+        buses_i = n.buses.query("carrier == 'AC'").index
+        if not np.isscalar(load_shedding): load_shedding = 1e2 # Eur/kWh
+        # intersect between macroeconomic and surveybased
+        # willingness to pay
+        # http://journal.frontiersin.org/article/10.3389/fenrg.2015.00055/full)
+        n.madd("Generator", buses_i, " load",
+               bus=buses_i,
                carrier='load',
                sign=1e-3, # Adjust sign to measure p and p_nom in kW instead of MW
-               marginal_cost=1e2, # Eur/kWh
-               # intersect between macroeconomic and surveybased
-               # willingness to pay
-               # http://journal.frontiersin.org/article/10.3389/fenrg.2015.00055/full
+               marginal_cost=load_shedding, 
                p_nom=1e9 # kW
                )
 
@@ -127,7 +131,7 @@ def prepare_network(n, solve_opts):
     if solve_opts.get('nhours'):
         nhours = solve_opts['nhours']
         n.set_snapshots(n.snapshots[:nhours])
-        n.snapshot_weightings[:] = 8760./nhours
+        n.snapshot_weightings[:] = 8760. / nhours
 
     return n
 
@@ -174,16 +178,16 @@ def add_EQ_constraints(n, o, scaling=1e-1):
         ggrouper = n.generators.bus
         lgrouper = n.loads.bus
         sgrouper = n.storage_units.bus
-    load = n.snapshot_weightings @ \
+    load = n.snapshot_weightings.generators @ \
            n.loads_t.p_set.groupby(lgrouper, axis=1).sum()
-    inflow = n.snapshot_weightings @ \
+    inflow = n.snapshot_weightings.stores @ \
              n.storage_units_t.inflow.groupby(sgrouper, axis=1).sum()
     inflow = inflow.reindex(load.index).fillna(0.)
     rhs = scaling * ( level * load - inflow )
-    lhs_gen = linexpr((n.snapshot_weightings * scaling,
+    lhs_gen = linexpr((n.snapshot_weightings.generators * scaling,
                        get_var(n, "Generator", "p").T)
               ).T.groupby(ggrouper, axis=1).apply(join_exprs)
-    lhs_spill = linexpr((-n.snapshot_weightings * scaling,
+    lhs_spill = linexpr((-n.snapshot_weightings.stores * scaling,
                          get_var(n, "StorageUnit", "spill").T)
                 ).T.groupby(sgrouper, axis=1).apply(join_exprs)
     lhs_spill = lhs_spill.reindex(lhs_gen.index).fillna("")
@@ -208,6 +212,75 @@ def add_SAFE_constraints(n, config):
     lhs = linexpr((1, get_var(n, 'Generator', 'p_nom')[ext_gens_i])).sum()
     rhs = peakdemand - exist_conv_caps
     define_constraints(n, lhs, '>=', rhs, 'Safe', 'mintotalcap')
+
+
+def add_operational_reserve_margin_constraint(n, config):
+    
+    reserve_config = config["electricity"]["operational_reserve"]
+    EPSILON_LOAD = reserve_config["epsilon_load"]
+    EPSILON_VRES = reserve_config["epsilon_vres"]
+    CONTINGENCY = reserve_config["contingency"]
+
+    # Reserve Variables 
+    reserve = get_var(n, 'Generator', 'r')
+    lhs = linexpr((1, reserve)).sum(1)
+
+    # Share of extendable renewable capacities
+    ext_i = n.generators.query('p_nom_extendable').index
+    vres_i = n.generators_t.p_max_pu.columns
+    if not ext_i.empty and not vres_i.empty:
+        capacity_factor = n.generators_t.p_max_pu[vres_i.intersection(ext_i)]
+        renewable_capacity_variables = get_var(n, 'Generator', 'p_nom')[vres_i.intersection(ext_i)]
+        lhs += linexpr((-EPSILON_VRES * capacity_factor, renewable_capacity_variables)).sum(1)
+
+    # Total demand at t
+    demand =  n.loads_t.p.sum(1)
+    
+    # VRES potential of non extendable generators
+    capacity_factor = n.generators_t.p_max_pu[vres_i.difference(ext_i)]
+    renewable_capacity = n.generators.p_nom[vres_i.difference(ext_i)]
+    potential = (capacity_factor * renewable_capacity).sum(1)
+    
+    # Right-hand-side
+    rhs = EPSILON_LOAD * demand + EPSILON_VRES * potential + CONTINGENCY
+        
+    define_constraints(n, lhs, '>=', rhs, "Reserve margin")
+
+
+def update_capacity_constraint(n):
+    gen_i = n.generators.index
+    ext_i = n.generators.query('p_nom_extendable').index
+    fix_i = n.generators.query('not p_nom_extendable').index
+
+    dispatch = get_var(n, 'Generator', 'p')
+    reserve = get_var(n, 'Generator', 'r')
+        
+    capacity_fixed = n.generators.p_nom[fix_i]
+    
+    p_max_pu = get_as_dense(n, 'Generator', 'p_max_pu')
+    
+    lhs = linexpr((1, dispatch), (1, reserve))
+    
+    if not ext_i.empty:
+        capacity_variable = get_var(n, 'Generator', 'p_nom')
+        lhs += linexpr((-p_max_pu[ext_i], capacity_variable)).reindex(columns=gen_i, fill_value='')
+    
+    rhs = (p_max_pu[fix_i] * capacity_fixed).reindex(columns=gen_i, fill_value=0)
+    
+    define_constraints(n, lhs, '<=', rhs, 'Generators', 'updated_capacity_constraint')
+
+
+def add_operational_reserve_margin(n, sns, config):
+    """
+    Build reserve margin constraints based on the formulation given in 
+    https://genxproject.github.io/GenX/dev/core/#Reserves.
+    """
+
+    define_variables(n, 0, np.inf, 'Generator', 'r', axes=[sns, n.generators.index])
+
+    add_operational_reserve_margin_constraint(n, config)
+    
+    update_capacity_constraint(n)
 
 
 def add_battery_constraints(n):
@@ -235,6 +308,9 @@ def extra_functionality(n, snapshots):
         add_SAFE_constraints(n, config)
     if 'CCL' in opts and n.generators.p_nom_extendable.any():
         add_CCL_constraints(n, config)
+    reserve = config["electricity"].get("operational_reserve", {})
+    if reserve.get("activate"):
+        add_operational_reserve_margin(n, snapshots, config)
     for o in opts:
         if "EQ" in o:
             add_EQ_constraints(n, o)
@@ -253,7 +329,12 @@ def solve_network(n, config, opts='', **kwargs):
     n.config = config
     n.opts = opts
 
-    if cf_solving.get('skip_iterations', False):
+    skip_iterations = cf_solving.get('skip_iterations', False)
+    if not n.lines.s_nom_extendable.any():
+        skip_iterations = True
+        logger.info("No expandable lines found. Skipping iterative solving.")
+
+    if skip_iterations:
         network_lopf(n, solver_name=solver_name, solver_options=solver_options,
                      extra_functionality=extra_functionality, **kwargs)
     else:
@@ -282,8 +363,7 @@ if __name__ == "__main__":
     with memory_logger(filename=fn, interval=30.) as mem:
         n = pypsa.Network(snakemake.input[0])
         n = prepare_network(n, solve_opts)
-        n = solve_network(n, config=snakemake.config, opts=opts,
-                          solver_dir=tmpdir,
+        n = solve_network(n, snakemake.config, opts, solver_dir=tmpdir,
                           solver_logfile=snakemake.log.solver)
         n.export_to_netcdf(snakemake.output[0])
 
