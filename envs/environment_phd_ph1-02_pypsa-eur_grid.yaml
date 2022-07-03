@@ -64,6 +64,7 @@ dependencies:
   - notebook
   - jupyter
   - plotly
+  - dill
 
 
   - pip:
