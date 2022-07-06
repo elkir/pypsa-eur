@@ -13,7 +13,7 @@ scenario:
   simpl: ['']
   ll: ['copt']
   clusters: [37, '128m', '256m', '512m', 1024]
-  opts: [Co2L-3H]
+  opts: [Co2L-3H,Co2L]
 
 countries: ['AL', 'AT', 'BA', 'BE', 'BG', 'CH', 'CZ', 'DE', 'DK', 'EE', 'ES', 'FI', 'FR', 'GB', 'GR', 'HR', 'HU', 'IE', 'IT', 'LT', 'LU', 'LV', 'ME', 'MK', 'NL', 'NO', 'PL', 'PT', 'RO', 'RS', 'SE', 'SI', 'SK']
 
@@ -25,8 +25,8 @@ snapshots:
 enable:
   prepare_links_p_nom: false
   retrieve_databundle: true
-  build_cutout: false
-  retrieve_cutout: true
+  build_cutout: true
+  retrieve_cutout: false
   build_natura_raster: false
   retrieve_natura_raster: true
   custom_busmap: false
