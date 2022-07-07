@@ -6,6 +6,7 @@ name: phd_ph4-02_pypsa-eur_large
 channels:
   - conda-forge
   - bioconda
+  - http://conda.anaconda.org/gurobi
 dependencies:
   - python>=3.8
   - pip
@@ -58,7 +59,7 @@ dependencies:
   # # Solvers:
   # - ipopt
   # - glpk
-  # - gurobi >= 9
+  - gurobi >= 9
 
   # My packages
   - matplotlib>=3.3
