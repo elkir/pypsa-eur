@@ -11,7 +11,7 @@ logging:
 
 scenario:
   simpl: ['']
-  ll: ['copt']
+  ll: ['copt','v2.0', 'v1.5']
   clusters: [37, '128m', '256m', '512m', 1024,"all"]
   opts: [Co2L-3H,Co2L]
 
