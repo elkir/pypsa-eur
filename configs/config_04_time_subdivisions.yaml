@@ -13,7 +13,7 @@ scenario:
   simpl: ['']
   ll: ['copt']
   clusters: [37 ] # , '64m'] '128m', '256m']
-  opts: [Co2L-3H,Co2L]
+  opts: [Co2L-3H] # ,Co2L]
   end: ["2013-01-07","2013-01-14","2013-02-01", "2013-03-01", "2013-04-01", "2013-07-01", "2014-01-01"]
 
 countries: ['AL', 'AT', 'BA', 'BE', 'BG', 'CH', 'CZ', 'DE', 'DK', 'EE', 'ES', 'FI', 'FR', 'GB', 'GR', 'HR', 'HU', 'IE', 'IT', 'LT', 'LU', 'LV', 'ME', 'MK', 'NL', 'NO', 'PL', 'PT', 'RO', 'RS', 'SE', 'SI', 'SK']
@@ -21,7 +21,7 @@ countries: ['AL', 'AT', 'BA', 'BE', 'BG', 'CH', 'CZ', 'DE', 'DK', 'EE', 'ES', 'F
 snapshots:
   start: "2013-01-01"
   # start: "2013-06-03" #one week starting Monday
-  end: "2014-01-01"
+  # end: "2014-01-01" # END is now a wildcard
   closed: 'left' # end is not inclusive
 
 enable:
