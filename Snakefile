@@ -20,7 +20,7 @@ wildcard_constraints:
     simpl="[a-zA-Z0-9]*|all",
     clusters="[0-9]+m?|all",
     ll="(v|c)([0-9\.]+|opt|all)|all",
-    opts="[-+a-zA-Z0-9\.]*"
+    opts="[-+a-zA-Z0-9\.]*",
     end="\d{4}-\d{2}-\d{2}"
 
 
@@ -134,8 +134,8 @@ rule build_shapes:
 
 rule build_bus_regions:
     input:
-        country_shapes='resources/{end}/country_shapes.geojson',
-        offshore_shapes='resources/{end}/offshore_shapes.geojson',
+        country_shapes='resources/country_shapes.geojson',
+        offshore_shapes='resources/offshore_shapes.geojson',
         base_network="networks/{end}/base.nc"
     output:
         regions_onshore="resources/{end}/regions_onshore.geojson",
@@ -209,7 +209,7 @@ rule build_renewable_profiles:
 
 rule build_hydro_profile:
     input:
-        country_shapes='resources/country_shapes.geojson',busm
+        country_shapes='resources/country_shapes.geojson',
         eia_hydro_generation='data/eia_hydro_annual_generation.csv',
         cutout=f"cutouts/{config['renewable']['hydro']['cutout']}.nc" if "hydro" in config["renewable"] else "config['renewable']['hydro']['cutout'] not configured",
     output: 'resources/profile_hydro.nc'
@@ -228,7 +228,9 @@ rule add_electricity:
         geth_hydro_capacities='data/geth2015_hydro_capacities.csv',
         load='resources/{end}/load.csv',
         nuts3_shapes='resources/nuts3_shapes.geojson',
-        **{f"profile_{tech}": f"resources/profile_{tech}.nc"
+        **{f"profile_{tech}": 
+            (f"resources/{{end}}/profile_{tech}.nc" if tech!="hydro"
+             else f"resources/profile_{tech}.nc")
            for tech in config['renewable']},
         **{f"conventional_{carrier}_{attr}": fn for carrier, d in config.get('conventional', {None: {}}).items() for attr, fn in d.items() if str(fn).startswith("data/")}, 
     output: "networks/{end}/elec.nc"
@@ -250,7 +252,7 @@ rule simplify_network:
         regions_onshore="resources/{end}/regions_onshore_elec_s{simpl}.geojson",
         regions_offshore="resources/{end}/regions_offshore_elec_s{simpl}.geojson",
         busmap='resources/{end}/busmap_elec_s{simpl}.csv',
-        connection_costs='resources/connection_costs_s{simpl}.csv'
+        connection_costs='resources/{end}/connection_costs_s{simpl}.csv'
     log: "logs/simplify_network/{end}/elec_s{simpl}.log"
     benchmark: "benchmarks/simplify_network/{end}/elec_s{simpl}"
     threads: 1

@@ -26,4 +26,5 @@ doc/_build
 config.yaml
 
 dconf
-dag.svg
+*.svg
+
