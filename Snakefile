@@ -151,7 +151,7 @@ if config['enable'].get('build_cutout', False):
             regions_onshore="resources/{end}/regions_onshore.geojson",
             regions_offshore="resources/{end}/regions_offshore.geojson"
         output: "cutouts/{end}/{cutout}.nc"
-        log: "logs/build_cutout/{end}/{cutout}.log"
+        log: "logs/{end}/build_cutout/{cutout}.log"
         benchmark: "benchmarks/{end}/build_cutout_{cutout}"
         threads: ATLITE_NPROCESSES
         resources: mem_mb=ATLITE_NPROCESSES * 1000
@@ -253,8 +253,8 @@ rule simplify_network:
         regions_offshore="resources/{end}/regions_offshore_elec_s{simpl}.geojson",
         busmap='resources/{end}/busmap_elec_s{simpl}.csv',
         connection_costs='resources/{end}/connection_costs_s{simpl}.csv'
-    log: "logs/simplify_network/{end}/elec_s{simpl}.log"
-    benchmark: "benchmarks/simplify_network/{end}/elec_s{simpl}"
+    log: "logs/{end}/simplify_network/elec_s{simpl}.log"
+    benchmark: "benchmarks/{end}/simplify_network/elec_s{simpl}"
     threads: 1
     resources: mem_mb=4000
     script: "scripts/simplify_network.py"
@@ -275,8 +275,8 @@ rule cluster_network:
         regions_offshore="resources/{end}/regions_offshore_elec_s{simpl}_{clusters}.geojson",
         busmap="resources/{end}/busmap_elec_s{simpl}_{clusters}.csv",
         linemap="resources/{end}/linemap_elec_s{simpl}_{clusters}.csv"
-    log: "logs/cluster_network/{end}/elec_s{simpl}_{clusters}.log"
-    benchmark: "benchmarks/cluster_network/{end}/elec_s{simpl}_{clusters}"
+    log: "logs/{end}/cluster_network/elec_s{simpl}_{clusters}.log"
+    benchmark: "benchmarks/{end}/cluster_network/elec_s{simpl}_{clusters}"
     threads: 1
     resources: mem_mb=6000
     script: "scripts/cluster_network.py"
@@ -287,8 +287,8 @@ rule add_extra_components:
         network='networks/{end}/elec_s{simpl}_{clusters}.nc',
         tech_costs=COSTS,
     output: 'networks/{end}/elec_s{simpl}_{clusters}_ec.nc'
-    log: "logs/add_extra_components/{end}/elec_s{simpl}_{clusters}.log"
-    benchmark: "benchmarks/add_extra_components/{end}/elec_s{simpl}_{clusters}_ec"
+    log: "logs/{end}/add_extra_components/elec_s{simpl}_{clusters}.log"
+    benchmark: "benchmarks/{end}/add_extra_components/elec_s{simpl}_{clusters}_ec"
     threads: 1
     resources: mem_mb=3000
     script: "scripts/add_extra_components.py"
@@ -297,8 +297,8 @@ rule add_extra_components:
 rule prepare_network:
     input: 'networks/{end}/elec_s{simpl}_{clusters}_ec.nc', tech_costs=COSTS
     output: 'networks/{end}/elec_s{simpl}_{clusters}_ec_l{ll}_{opts}.nc'
-    log: "logs/prepare_network/{end}/elec_s{simpl}_{clusters}_ec_l{ll}_{opts}.log"
-    benchmark: "benchmarks/prepare_network/{end}/elec_s{simpl}_{clusters}_ec_l{ll}_{opts}"
+    log: "logs/{end}/prepare_network/elec_s{simpl}_{clusters}_ec_l{ll}_{opts}.log"
+    benchmark: "benchmarks/{end}/prepare_network/elec_s{simpl}_{clusters}_ec_l{ll}_{opts}"
     threads: 1
     resources: mem_mb=4000
     script: "scripts/prepare_network.py"
@@ -328,10 +328,10 @@ rule solve_network:
     input: "networks/{end}/elec_s{simpl}_{clusters}_ec_l{ll}_{opts}.nc"
     output: "results/networks/{end}/elec_s{simpl}_{clusters}_ec_l{ll}_{opts}.nc"
     log:
-        solver=normpath("logs/solve_network/{end}/elec_s{simpl}_{clusters}_ec_l{ll}_{opts}_solver.log"),
-        python="logs/solve_network/{end}/elec_s{simpl}_{clusters}_ec_l{ll}_{opts}_python.log",
-        memory="logs/solve_network/{end}/elec_s{simpl}_{clusters}_ec_l{ll}_{opts}_memory.log"
-    benchmark: "benchmarks/solve_network/{end}/elec_s{simpl}_{clusters}_ec_l{ll}_{opts}"
+        solver=normpath("logs/{end}/solve_network/elec_s{simpl}_{clusters}_ec_l{ll}_{opts}_solver.log"),
+        python="logs/{end}/solve_network/elec_s{simpl}_{clusters}_ec_l{ll}_{opts}_python.log",
+        memory="logs/{end}/solve_network/elec_s{simpl}_{clusters}_ec_l{ll}_{opts}_memory.log"
+    benchmark: "benchmarks/{end}/solve_network/elec_s{simpl}_{clusters}_ec_l{ll}_{opts}"
     threads: 4
     resources: mem_mb=memory
     shadow: "minimal"
@@ -344,10 +344,10 @@ rule solve_operations_network:
         optimized="results/networks/{end}/elec_s{simpl}_{clusters}_ec_l{ll}_{opts}.nc"
     output: "results/networks/{end}/elec_s{simpl}_{clusters}_ec_l{ll}_{opts}_op.nc"
     log:
-        solver=normpath("logs/solve_operations_network/{end}/elec_s{simpl}_{clusters}_ec_l{ll}_{opts}_op_solver.log"),
-        python="logs/solve_operations_network/{end}/elec_s{simpl}_{clusters}_ec_l{ll}_{opts}_op_python.log",
-        memory="logs/solve_operations_network/{end}/elec_s{simpl}_{clusters}_ec_l{ll}_{opts}_op_memory.log"
-    benchmark: "benchmarks/solve_operations_network/{end}/elec_s{simpl}_{clusters}_ec_l{ll}_{opts}"
+        solver=normpath("logs/{end}/solve_operations_network/elec_s{simpl}_{clusters}_ec_l{ll}_{opts}_op_solver.log"),
+        python="logs/{end}/solve_operations_network/elec_s{simpl}_{clusters}_ec_l{ll}_{opts}_op_python.log",
+        memory="logs/{end}/solve_operations_network/elec_s{simpl}_{clusters}_ec_l{ll}_{opts}_op_memory.log"
+    benchmark: "benchmarks/{end}/solve_operations_network/elec_s{simpl}_{clusters}_ec_l{ll}_{opts}"
     threads: 4
     resources: mem_mb=(lambda w: 5000 + 372 * int(w.clusters))
     shadow: "minimal"
@@ -361,7 +361,7 @@ rule plot_network:
     output:
         only_map="results/plots/{end}/elec_s{simpl}_{clusters}_ec_l{ll}_{opts}_{attr}.{ext}",
         ext="results/plots/{end}/elec_s{simpl}_{clusters}_ec_l{ll}_{opts}_{attr}_ext.{ext}"
-    log: "logs/plot_network/{end}/elec_s{simpl}_{clusters}_ec_l{ll}_{opts}_{attr}_{ext}.log"
+    log: "logs/{end}/plot_network/elec_s{simpl}_{clusters}_ec_l{ll}_{opts}_{attr}_{ext}.log"
     script: "scripts/plot_network.py"
 
 
@@ -383,14 +383,14 @@ def input_make_summary(w):
 rule make_summary:
     input: input_make_summary
     output: directory("results/summaries/{end}/elec_s{simpl}_{clusters}_ec_l{ll}_{opts}_{country}")
-    log: "logs/make_summary/{end}/elec_s{simpl}_{clusters}_ec_l{ll}_{opts}_{country}.log",
+    log: "logs/{end}/make_summary/elec_s{simpl}_{clusters}_ec_l{ll}_{opts}_{country}.log",
     script: "scripts/make_summary.py"
 
 
 rule plot_summary:
     input: "results/summaries/{end}/elec_s{simpl}_{clusters}_ec_l{ll}_{opts}_{country}"
     output: "results/plots/{end}/summary_{summary}_elec_s{simpl}_{clusters}_ec_l{ll}_{opts}_{country}.{ext}"
-    log: "logs/plot_summary/{end}/{summary}_elec_s{simpl}_{clusters}_ec_l{ll}_{opts}_{country}_{ext}.log"
+    log: "logs/{end}/plot_summary/{summary}_elec_s{simpl}_{clusters}_ec_l{ll}_{opts}_{country}_{ext}.log"
     script: "scripts/plot_summary.py"
 
 
@@ -403,6 +403,6 @@ def input_plot_p_nom_max(w):
 rule plot_p_nom_max:
     input: input_plot_p_nom_max
     output: "results/plots/{end}/elec_s{simpl}_cum_p_nom_max_{clusts}_{techs}_{country}.{ext}"
-    log: "logs/plot_p_nom_max/{end}/elec_s{simpl}_{clusts}_{techs}_{country}_{ext}.log"
+    log: "logs/{end}/plot_p_nom_max/elec_s{simpl}_{clusts}_{techs}_{country}_{ext}.log"
     script: "scripts/plot_p_nom_max.py"
 
