@@ -22,7 +22,7 @@ wildcard_constraints:
     ll="(v|c)([0-9\.]+|opt|all)|all",
     opts="[-+a-zA-Z0-9\.]*",
     # end="\d{4}-\d{2}-\d{2}",
-    year="\d{4}"
+    year="\d{4}",
     chunk="\d+[DWMY]"
 
 
@@ -138,7 +138,7 @@ rule build_bus_regions:
     input:
         country_shapes='resources/country_shapes.geojson',
         offshore_shapes='resources/offshore_shapes.geojson',
-        base_network="networks/{year}/base.nc"
+        base_network="networks/{year}/base.nc" #TODO year handling
     output:
         regions_onshore="resources/{year}/regions_onshore.geojson",
         regions_offshore="resources/{year}/regions_offshore.geojson"
@@ -199,7 +199,7 @@ rule build_renewable_profiles:
         regions=lambda w: ("resources/{year}/regions_onshore.geojson"
                                    if w.technology in ('onwind', 'solar')
                                    else "resources/{year}/regions_offshore.geojson"),
-        cutout=lambda w: "cutouts/" + config["renewable"][w.technology]['cutout'] + ".nc"
+        cutout=lambda w: "cutouts/" + "europe-{year}-era5" + ".nc"
     output: profile="resources/{year}/profile_{technology}.nc",
     log: "logs/{year}/build_renewable_profile_{technology}.log"
     benchmark: "benchmarks/{year}/build_renewable_profiles_{technology}"
@@ -213,9 +213,11 @@ rule build_hydro_profile:
     input:
         country_shapes='resources/country_shapes.geojson',
         eia_hydro_generation='data/eia_hydro_annual_generation.csv',
-        cutout=f"cutouts/{config['renewable']['hydro']['cutout']}.nc" if "hydro" in config["renewable"] else "config['renewable']['hydro']['cutout'] not configured",
-    output: 'resources/profile_hydro.nc'
-    log: "logs/build_hydro_profile.log"
+        cutout=(f"cutouts/europe-{{year}}-era5.nc" 
+            if "hydro" in config["renewable"] 
+            else "config['renewable']['hydro']['cutout'] not configured"),
+    output: 'resources/{year}/profile_hydro.nc'
+    log: "logs/{year}/build_hydro_profile.log"
     resources: mem_mb=5000
     script: 'scripts/build_hydro_profile.py'
 
@@ -230,11 +232,11 @@ rule add_electricity:
         geth_hydro_capacities='data/geth2015_hydro_capacities.csv',
         load='resources/{year}/load.csv',
         nuts3_shapes='resources/nuts3_shapes.geojson',
-        **{f"profile_{tech}": 
-            (f"resources/{{year}}/profile_{tech}.nc" if tech!="hydro"
-             else f"resources/profile_{tech}.nc")
-           for tech in config['renewable']},
-        **{f"conventional_{carrier}_{attr}": fn for carrier, d in config.get('conventional', {None: {}}).items() for attr, fn in d.items() if str(fn).startswith("data/")}, 
+        **{f"profile_{tech}": f"resources/{{year}}/profile_{tech}.nc" 
+            for tech in config['renewable']},
+        **{f"conventional_{carrier}_{attr}": fn
+            for carrier, d in config.get('conventional', 
+                {None: {}}).items() for attr, fn in d.items() if str(fn).startswith("data/")}, 
     output: "networks/{year}/elec.nc"
     log: "logs/{year}/add_electricity.log"
     benchmark: "benchmarks/{year}/add_electricity"
