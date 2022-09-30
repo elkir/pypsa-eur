@@ -327,12 +327,12 @@ def memory(w):
 
 rule solve_network:
     input: "networks/{end}/elec_s{simpl}_{clusters}_ec_l{ll}_{opts}.nc"
-    output: "results/networks/{end}/elec_s{simpl}_{clusters}_ec_l{ll}_{opts}_{chunk}.nc"
+    output: "results/networks/{end}/{chunk}/elec_s{simpl}_{clusters}_ec_l{ll}_{opts}.nc"
     log:
-        solver=normpath("logs/{end}/solve_network/elec_s{simpl}_{clusters}_ec_l{ll}_{opts}_{chunk}_solver.log"),
-        python="logs/{end}/solve_network/elec_s{simpl}_{clusters}_ec_l{ll}_{opts}_{chunk}_python.log",
-        memory="logs/{end}/solve_network/elec_s{simpl}_{clusters}_ec_l{ll}_{opts}_{chunk}_memory.log"
-    benchmark: "benchmarks/{end}/solve_network/elec_s{simpl}_{clusters}_ec_l{ll}_{opts}_{chunk}"
+        solver=normpath("logs/{end}/solve_network/{chunk}/elec_s{simpl}_{clusters}_ec_l{ll}_{opts}_solver.log"),
+        python="logs/{end}/solve_network/{chunk}/elec_s{simpl}_{clusters}_ec_l{ll}_{opts}_python.log",
+        memory="logs/{end}/solve_network/{chunk}/elec_s{simpl}_{clusters}_ec_l{ll}_{opts}_memory.log"
+    benchmark: "benchmarks/{end}/solve_network/{chunk}/elec_s{simpl}_{clusters}_ec_l{ll}_{opts}"
     threads: 4
     resources: mem_mb=memory
     shadow: "minimal"
@@ -357,12 +357,12 @@ rule solve_operations_network:
 
 rule plot_network:
     input:
-        network="results/networks/{end}/elec_s{simpl}_{clusters}_ec_l{ll}_{opts}_{chunk}.nc",
+        network="results/networks/{end}/{chunk}/elec_s{simpl}_{clusters}_ec_l{ll}_{opts}.nc",
         tech_costs=COSTS
     output:
-        only_map="results/plots/{end}/elec_s{simpl}_{clusters}_ec_l{ll}_{opts}_{chunk}_{attr}.{ext}",
-        ext="results/plots/{end}/elec_s{simpl}_{clusters}_ec_l{ll}_{opts}_{chunk}_{attr}_ext.{ext}"
-    log: "logs/{end}/plot_network/elec_s{simpl}_{clusters}_ec_l{ll}_{opts}_{chunk}_{attr}_{ext}.log"
+        only_map="results/plots/{end}/{chunk}/elec_s{simpl}_{clusters}_ec_l{ll}_{opts}_{attr}.{ext}",
+        ext="results/plots/{end}/{chunk}/elec_s{simpl}_{clusters}_ec_l{ll}_{opts}_{attr}_ext.{ext}"
+    log: "logs/{end}/plot_network/{chunk}/elec_s{simpl}_{clusters}_ec_l{ll}_{opts}_{attr}_{ext}.log"
     script: "scripts/plot_network.py"
 
 
@@ -375,7 +375,7 @@ def input_make_summary(w):
     else:
         ll = w.ll
     return ([COSTS] +
-            expand("results/networks/{end}/elec_s{simpl}_{clusters}_ec_l{ll}_{opts}_{chunk}.nc",
+            expand("results/networks/{end}/{chunk}/elec_s{simpl}_{clusters}_ec_l{ll}_{opts}.nc",
                    ll=ll,
                    **{k: config["scenario"][k] if getattr(w, k) == "all" else getattr(w, k)
                       for k in ["simpl", "clusters", "opts"]}))
@@ -383,15 +383,15 @@ def input_make_summary(w):
 
 rule make_summary:
     input: input_make_summary
-    output: directory("results/summaries/{end}/elec_s{simpl}_{clusters}_ec_l{ll}_{opts}_{chunk}_{country}")
-    log: "logs/{end}/make_summary/elec_s{simpl}_{clusters}_ec_l{ll}_{opts}_{chunk}_{country}.log",
+    output: directory("results/summaries/{end}/{chunk}/elec_s{simpl}_{clusters}_ec_l{ll}_{opts}_{country}")
+    log: "logs/{end}/make_summary/{chunk}/elec_s{simpl}_{clusters}_ec_l{ll}_{opts}_{country}.log",
     script: "scripts/make_summary.py"
 
 
 rule plot_summary:
-    input: "results/summaries/{end}/elec_s{simpl}_{clusters}_ec_l{ll}_{opts}_{chunk}_{country}"
-    output: "results/plots/{end}/summary_{summary}_elec_s{simpl}_{clusters}_ec_l{ll}_{opts}_{chunk}_{country}.{ext}"
-    log: "logs/{end}/plot_summary/{summary}_elec_s{simpl}_{clusters}_ec_l{ll}_{opts}_{chunk}_{country}_{ext}.log"
+    input: "results/summaries/{end}/{chunk}/elec_s{simpl}_{clusters}_ec_l{ll}_{opts}_{country}"
+    output: "results/plots/{end}/{chunk}/summary_{summary}_elec_s{simpl}_{clusters}_ec_l{ll}_{opts}_{country}.{ext}"
+    log: "logs/{end}/plot_summary/{chunk}/{summary}_elec_s{simpl}_{clusters}_ec_l{ll}_{opts}_{country}_{ext}.log"
     script: "scripts/plot_summary.py"
 
 
