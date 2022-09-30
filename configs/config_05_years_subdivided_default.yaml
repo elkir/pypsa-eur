@@ -15,7 +15,6 @@ scenario:
   clusters: [37, '64m'] # [37,'64m', '128m', '256m']
   opts: ['Co2L-3H','Co2L']
   year: ['2013']
-  end:  ["2013-03-01"] # ["2013-01-07","2013-01-14","2013-02-01", "2013-03-01", "2013-04-01", "2013-07-01", "2014-01-01"]
   chunk: ["1M"] # ["1W","2W","1M","2M","3M","4M","6M","1Y"] 
 countries: ['AL', 'AT', 'BA', 'BE', 'BG', 'CH', 'CZ', 'DE', 'DK', 'EE', 'ES', 'FI', 'FR', 'GB', 'GR', 'HR', 'HU', 'IE', 'IT', 'LT', 'LU', 'LV', 'ME', 'MK', 'NL', 'NO', 'PL', 'PT', 'RO', 'RS', 'SE', 'SI', 'SK']
 
@@ -98,8 +97,9 @@ atlite:
 
       
 renewable:
+  # Cutouts automatic: europe-{year}-era5
   onwind:
-    cutout: europe-2013-era5
+    # cutout: europe-2013-era5 
     resource:
       method: wind
       turbine: Vestas_V112_3MW
@@ -115,8 +115,9 @@ renewable:
     natura: true
     potential: simple # or conservative
     clip_p_max_pu: 1.e-2
+
   offwind-ac:
-    cutout: europe-2013-era5
+    # cutout: europe-2013-era5
     resource:
       method: wind
       turbine: NREL_ReferenceTurbine_5MW_offshore
@@ -132,7 +133,7 @@ renewable:
     potential: simple # or conservative
     clip_p_max_pu: 1.e-2
   offwind-dc:
-    cutout: europe-2013-era5
+    # cutout: europe-2013-era5
     resource:
       method: wind
       turbine: NREL_ReferenceTurbine_5MW_offshore
@@ -149,7 +150,7 @@ renewable:
     potential: simple # or conservative
     clip_p_max_pu: 1.e-2
   solar:
-    cutout: europe-2013-era5
+    # cutout: europe-2013-era5
     resource:
       method: pv
       panel: CSi
@@ -171,7 +172,7 @@ renewable:
     potential: simple # or conservative
     clip_p_max_pu: 1.e-2
   hydro:
-    cutout: europe-2013-era5
+    # cutout: europe-2013-era5
     carriers: [ror, PHS, hydro]
     PHS_max_hours: 6
     hydro_max_hours: "energy_capacity_totals_by_country" # one of energy_capacity_totals_by_country, estimate_by_large_installations or a float
