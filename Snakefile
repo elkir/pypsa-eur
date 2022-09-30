@@ -79,8 +79,7 @@ rule build_load_data:
     input: "data/load_raw.csv"
     output: "resources/{year}/load.csv"
     log: "logs/{year}/build_load_data.log"
-    script: 'scripts/build_load_data.py'    #TODO year dependency
-                                            #TODO weather depenedency
+    script: 'scripts/build_load_data.py'   #TODO weather depenedency
     
 
 rule build_powerplants:
@@ -112,7 +111,7 @@ rule base_network:
     benchmark: "benchmarks/{year}/base_network"
     threads: 1
     resources: mem_mb=500
-    script: "scripts/base_network.py"  #TODO year dependency
+    script: "scripts/base_network.py"  
 
 
 rule build_shapes:
@@ -139,7 +138,7 @@ rule build_bus_regions:
     input:
         country_shapes='resources/country_shapes.geojson',
         offshore_shapes='resources/offshore_shapes.geojson',
-        base_network="networks/{year}/base.nc" #TODO year handling
+        base_network="networks/{year}/base.nc" 
     output:
         regions_onshore="resources/{year}/regions_onshore.geojson",
         regions_offshore="resources/{year}/regions_offshore.geojson"
