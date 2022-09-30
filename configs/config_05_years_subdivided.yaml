@@ -20,10 +20,10 @@ scenario:
 countries: ['AL', 'AT', 'BA', 'BE', 'BG', 'CH', 'CZ', 'DE', 'DK', 'EE', 'ES', 'FI', 'FR', 'GB', 'GR', 'HR', 'HU', 'IE', 'IT', 'LT', 'LU', 'LV', 'ME', 'MK', 'NL', 'NO', 'PL', 'PT', 'RO', 'RS', 'SE', 'SI', 'SK']
 
 snapshots:
-  start: "2013-01-01"
-  # start: "2013-06-03" #one week starting Monday
-  # end: "2014-01-01" # END is now a wildcard
-  closed: 'left' # end is not inclusive
+  # Bounds generated from {year}, use to overwrite only
+  # start: "2013-01-01" # 
+  # end: "2014-01-01" # 
+  inclusive: 'left' # end is not inclusive
 
 enable:
   prepare_links_p_nom: false

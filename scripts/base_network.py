@@ -563,11 +563,12 @@ def base_network(eg_buses, eg_converters, eg_transformers, eg_lines, eg_links,
     n.name = 'PyPSA-Eur'
     
     
-    n.set_snapshots(pd.date_range(freq='h', start=year, end=str(int(year)+1),
+    n.set_snapshots(pd.date_range(freq='h',
+                     start=year, end=str(int(year)+1),
                      **config['snapshots']))
 
     n.import_components_from_dataframe(buses, "Bus")
-    n.import_components_from_dataframe(lines, "Line")#TODO snapshots
+    n.import_components_from_dataframe(lines, "Line")
     n.import_components_from_dataframe(transformers, "Transformer")
     n.import_components_from_dataframe(links, "Link")
     n.import_components_from_dataframe(converters, "Link")
