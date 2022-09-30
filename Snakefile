@@ -79,7 +79,8 @@ rule build_load_data:
     input: "data/load_raw.csv"
     output: "resources/{year}/load.csv"
     log: "logs/{year}/build_load_data.log"
-    script: 'scripts/build_load_data.py' #TODO
+    script: 'scripts/build_load_data.py'    #TODO year dependency
+                                            #TODO weather depenedency
     
 
 rule build_powerplants:
@@ -111,7 +112,7 @@ rule base_network:
     benchmark: "benchmarks/{year}/base_network"
     threads: 1
     resources: mem_mb=500
-    script: "scripts/base_network.py" 
+    script: "scripts/base_network.py"  #TODO year dependency
 
 
 rule build_shapes:
