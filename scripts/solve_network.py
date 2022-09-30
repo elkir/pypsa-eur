@@ -316,15 +316,82 @@ def extra_functionality(n, snapshots):
             add_EQ_constraints(n, o)
     add_battery_constraints(n)
 
+def get_subsnapshots(N,s, type=None):
+    """Splits snapshots into a list of times covering certain period specified by N.  
 
-def solve_network(n, config, opts='', **kwargs):
+    Args:
+        N (str or int): String must be in a format <N>Y or [1,2,3,4,6,12]M for calendar year or months,
+            or in the pd.Timedelta input format. Integer represents days.
+        s (pd.DatetimeIndex, optional): . Defaults to snapshots_max.
+        type (str, optional): None if automatic based on N, or "timedelta", "months" or "years". Defaults to None.
+
+    Returns:
+        list of pd.DatetimeIndex objects: The list should cover all the original times, and is either:
+            all of the same length except the last one, following the Timedelta offset or
+            following calnder months or years
+    """    
+    import re
+    if type is None:
+        if isinstance(N,str):
+            m = re.fullmatch(r"(\d+)([DWMY])",N.upper())
+            if m is None: 
+                type="timedelta" 
+            else:
+                switch = m[2]
+                if switch=="D":                    
+                    type = "timedelta"
+                elif switch=="W": 
+                    type = "timedelta"
+                elif switch=="M": 
+                    type = "months"
+                    N = int(m[1])
+                elif switch=="Y": 
+                    type = "years"
+                    N = int(m[1])
+        elif isinstance(N,int):
+            type = "timedelta"
+            N = f"{N}D"
+                
+    start = s.min()
+    end = s.max()
+    if type == "timedelta":
+        offset = pd.Timedelta(N)
+        periods = pd.date_range(start,end=end+offset, freq=offset)
+        subperiods=[s[np.logical_and(x<=s,s<x+offset)] for x in periods[:-1]]
+        return subperiods
+        
+    # Generating subperiods Months
+    if type=="months":
+        N_periods = 12//N
+        offset = pd.DateOffset(months=N)
+        subperiods = [s[np.logical_and((start+i*offset)<=s,s<(start+(i+1)*offset))] 
+            for i in range(N_periods)]
+        return subperiods
+    # Generating subperiods Years
+    if type=="years":
+        if (end-start)>pd.Timedelta("366D"): # not multiple years
+            return [s]
+        else:
+            N_periods = N
+            offset = pd.DateOffset(years=N)
+            subperiods = []
+            t_start=start
+            while t_start<end:
+                t_end = t_start+offset
+                b = np.logical_and(t_start<=s,s<t_end)
+                subperiods.append(s[b])
+                t_start = t_end
+            return subperiods
+
+def solve_network(n, config, chunk, opts='',   **kwargs):
     solver_options = config['solving']['solver'].copy()
     solver_name = solver_options.pop('name')
     cf_solving = config['solving']['options']
     track_iterations = cf_solving.get('track_iterations', False)
     min_iterations = cf_solving.get('min_iterations', 4)
     max_iterations = cf_solving.get('max_iterations', 6)
-
+    
+    
     # add to network for extra_functionality
     n.config = config
     n.opts = opts
@@ -333,16 +400,21 @@ def solve_network(n, config, opts='', **kwargs):
     if not n.lines.s_nom_extendable.any():
         skip_iterations = True
         logger.info("No expandable lines found. Skipping iterative solving.")
-
-    if skip_iterations:
-        network_lopf(n, solver_name=solver_name, solver_options=solver_options,
-                     extra_functionality=extra_functionality, **kwargs)
-    else:
-        ilopf(n, solver_name=solver_name, solver_options=solver_options,
-              track_iterations=track_iterations,
-              min_iterations=min_iterations,
-              max_iterations=max_iterations,
-              extra_functionality=extra_functionality, **kwargs)
+        
+    subsnapshots = get_subsnapshots(chunk,n.snapshots)
+    for subsnap in subsnapshots:
+        if skip_iterations:
+            network_lopf(n, snapshots=subsnap,
+                        solver_name=solver_name, solver_options=solver_options,
+                        extra_functionality=extra_functionality, **kwargs)
+        else:
+            ilopf(n, snapshots=subsnap,
+                solver_name=solver_name, solver_options=solver_options,
+                track_iterations=track_iterations,
+                min_iterations=min_iterations,
+                max_iterations=max_iterations,
+                extra_functionality=extra_functionality, **kwargs)
+        
     return n
 
 
@@ -357,13 +429,14 @@ if __name__ == "__main__":
     if tmpdir is not None:
         Path(tmpdir).mkdir(parents=True, exist_ok=True)
     opts = snakemake.wildcards.opts.split('-')
+    chunk = snakemake.wildcards.chunk
     solve_opts = snakemake.config['solving']['options']
 
     fn = getattr(snakemake.log, 'memory', None)
     with memory_logger(filename=fn, interval=30.) as mem:
         n = pypsa.Network(snakemake.input[0])
         n = prepare_network(n, solve_opts)
-        n = solve_network(n, snakemake.config, opts, solver_dir=tmpdir,
+        n = solve_network(n, snakemake.config, chunk, opts, solver_dir=tmpdir,
                           solver_logfile=snakemake.log.solver)
         n.export_to_netcdf(snakemake.output[0])
 
