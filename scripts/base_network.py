@@ -541,7 +541,7 @@ def _adjust_capacities_of_under_construction_branches(n, config):
 
 def base_network(eg_buses, eg_converters, eg_transformers, eg_lines, eg_links,
                  links_p_nom, links_tyndp, europe_shape, country_shapes, offshore_shapes,
-                 parameter_corrections, config):
+                 parameter_corrections, config, year):
 
     buses = _load_buses_from_eg(eg_buses, europe_shape, config['electricity'])
 
@@ -561,11 +561,13 @@ def base_network(eg_buses, eg_converters, eg_transformers, eg_lines, eg_links,
 
     n = pypsa.Network()
     n.name = 'PyPSA-Eur'
-
-    n.set_snapshots(pd.date_range(freq='h', **config['snapshots']))
+    
+    
+    n.set_snapshots(pd.date_range(freq='h', start=year, end=str(int(year)+1),
+                     **config['snapshots']))
 
     n.import_components_from_dataframe(buses, "Bus")
-    n.import_components_from_dataframe(lines, "Line")
+    n.import_components_from_dataframe(lines, "Line")#TODO snapshots
     n.import_components_from_dataframe(transformers, "Transformer")
     n.import_components_from_dataframe(links, "Link")
     n.import_components_from_dataframe(converters, "Link")
@@ -594,6 +596,6 @@ if __name__ == "__main__":
 
     n = base_network(snakemake.input.eg_buses, snakemake.input.eg_converters, snakemake.input.eg_transformers, snakemake.input.eg_lines, snakemake.input.eg_links,
                      snakemake.input.links_p_nom, snakemake.input.links_tyndp, snakemake.input.europe_shape, snakemake.input.country_shapes, snakemake.input.offshore_shapes,
-                     snakemake.input.parameter_corrections, snakemake.config)
+                     snakemake.input.parameter_corrections, snakemake.config,snakemake.wildcards.year) 
 
     n.export_to_netcdf(snakemake.output[0])
