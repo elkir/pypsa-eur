@@ -39,7 +39,7 @@ rule prepare_all_networks:
 
 
 rule solve_all_networks:
-    input: expand("results/networks/{year}/elec_s{simpl}_{clusters}_ec_l{ll}_{opts}.nc", **config['scenario'])
+    input: expand("results/networks/{year}/{chunk}/elec_s{simpl}_{clusters}_ec_l{ll}_{opts}.nc", **config['scenario'])
 
 
 if config['enable'].get('prepare_links_p_nom', False):
