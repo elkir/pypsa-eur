@@ -316,7 +316,7 @@ def extra_functionality(n, snapshots):
             add_EQ_constraints(n, o)
     add_battery_constraints(n)
 
-def get_subsnapshots(N,s, type=None):
+def get_subsnapshots(N,s, type=None, reminder_behavior="le"):
     """Splits snapshots into a list of times covering certain period specified by N.  
 
     Args:
@@ -324,6 +324,12 @@ def get_subsnapshots(N,s, type=None):
             or in the pd.Timedelta input format. Integer represents days.
         s (pd.DatetimeIndex, optional): . Defaults to snapshots_max.
         type (str, optional): None if automatic based on N, or "timedelta", "months" or "years". Defaults to None.
+        reminder_behavior (str, optional): For "timedelta". How to deal with the reminder timeslot: 
+            "le": period less than or equal than chunk
+            "ge": period greater or equal to chunk (joins reminder with last chunk)
+            "round": if less than half then "ge", if more than half then "le"
+            Defaults to "le".
+
 
     Returns:
         list of pd.DatetimeIndex objects: The list should cover all the original times, and is either:
@@ -400,9 +406,11 @@ def solve_network(n, config, chunk, opts='',   **kwargs):
     if not n.lines.s_nom_extendable.any():
         skip_iterations = True
         logger.info("No expandable lines found. Skipping iterative solving.")
-        
     subsnapshots = get_subsnapshots(chunk,n.snapshots)
-    for subsnap in subsnapshots:
+    N_chunks = len(subsnapshots)
+    logger.info(f"Starting optimization procedure over {N_chunks} periods of size {chunk}.")
+    for i,subsnap in enumerate(subsnapshots):
+        logger.info(f"Optimizing period {i+1}/{N_chunks}, from {subsnap.min()} to {subsnap.max()}, a total of {len(subsnap)} slices.")
         if skip_iterations:
             network_lopf(n, snapshots=subsnap,
                         solver_name=solver_name, solver_options=solver_options,
