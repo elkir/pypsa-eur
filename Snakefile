@@ -341,15 +341,6 @@ rule solve_network:
     shadow: "minimal"
     script: "scripts/solve_network.py"
 
-rule extract_ml_data:
-    input: "results/networks/{year}/{chunk}/elec_s{simpl}_{clusters}_ec_l{ll}_{opts}.nc"
-    output: 
-        inputs="results/ml/{year}/{chunk}/elec_s{simpl}_{clusters}_ec_l{ll}_{opts}_inputs.P",
-        outputs="results/ml/{year}/{chunk}/elec_s{simpl}_{clusters}_ec_l{ll}_{opts}_outputs.P",
-        outputs_p="results/ml/{year}/{chunk}/elec_s{simpl}_{clusters}_ec_l{ll}_{opts}_outputs_p.P"
-    log: "logs/{year}/{chunk}/extract_ml_data/elec_s{simpl}_{clusters}_ec_l{ll}_{opts}.log"
-    benchmark: "benchmarks/{year}/{chunk}/extract_ml_data/elec_s{simpl}_{clusters}_ec_l{ll}_{opts}"
-    script: "scripts/extract_ml_data.py"
 
 rule solve_operations_network:
     input:
@@ -366,6 +357,15 @@ rule solve_operations_network:
     shadow: "minimal"
     script: "scripts/solve_operations_network.py"
 
+rule extract_ml_data:
+    input: "results/networks/{year}/{chunk}/elec_s{simpl}_{clusters}_ec_l{ll}_{opts}.nc"
+    output: 
+        inputs="results/ml/{year}/{chunk}/elec_s{simpl}_{clusters}_ec_l{ll}_{opts}_inputs.P",
+        outputs="results/ml/{year}/{chunk}/elec_s{simpl}_{clusters}_ec_l{ll}_{opts}_outputs.P",
+        outputs_p="results/ml/{year}/{chunk}/elec_s{simpl}_{clusters}_ec_l{ll}_{opts}_outputs_p.P"
+    log: "logs/{year}/{chunk}/extract_ml_data/elec_s{simpl}_{clusters}_ec_l{ll}_{opts}.log"
+    benchmark: "benchmarks/{year}/{chunk}/extract_ml_data/elec_s{simpl}_{clusters}_ec_l{ll}_{opts}"
+    script: "scripts/extract_ml_data.py"
 
 rule plot_network:
     input:
