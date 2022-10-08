@@ -274,6 +274,8 @@ solving:
   #   solutiontype: 2 # non basic solution, ie no crossover
   #   barrier.convergetol: 1.e-5
   #   feasopt.tolerance: 1.e-6
+export_ml:
+  keep_na_columns: false
 
 plotting:
   map:

@@ -275,6 +275,9 @@ solving:
   #   barrier.convergetol: 1.e-5
   #   feasopt.tolerance: 1.e-6
 
+export_ml:
+  keep_na_columns: false
+
 plotting:
   map:
     figsize: [7, 7]
