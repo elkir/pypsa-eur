@@ -14,8 +14,9 @@ scenario:
   ll: ['copt']
   clusters: ["64m"] #, '64m'] # [37,'64m', '128m', '256m']
   opts: ['Co2L-3H']
-  year: ['2011','2012','2014'] #['2011','2012','2013','2014']
+  year: ['2010','2011','2012','2013','2014','2015','2016','2017','2018'] #['2011','2012','2013','2014']
   chunk: ["3M"] # ["1W","2W","1M","2M","3M","4M","6M","1Y"] 
+  
 countries: ['AL', 'AT', 'BA', 'BE', 'BG', 'CH', 'CZ', 'DE', 'DK', 'EE', 'ES', 'FI', 'FR', 'GB', 'GR', 'HR', 'HU', 'IE', 'IT', 'LT', 'LU', 'LV', 'ME', 'MK', 'NL', 'NO', 'PL', 'PT', 'RO', 'RS', 'SE', 'SI', 'SK']
 
 snapshots:
@@ -32,6 +33,10 @@ enable:
   build_natura_raster: false
   retrieve_natura_raster: false
   custom_busmap: false
+  cutouts_from_archive: false
+
+archive:
+  location_cutouts: "/home/pd423/export/pypsa-eur/cutouts/2022-07_001"
 
 electricity:
   voltages: [220., 300., 380.]
@@ -155,8 +160,7 @@ renewable:
       method: pv
       panel: CSi
       orientation:
-        slope: 35.export_ml:
-  keep_na_columns: false
+        slope: 35.
         azimuth: 180.
     capacity_per_sqkm: 1.7 # ScholzPhd Tab 4.3.1: 170 MW/km^2
     # Correction factor determined by comparing uncorrected area-weighted full-load hours to those
