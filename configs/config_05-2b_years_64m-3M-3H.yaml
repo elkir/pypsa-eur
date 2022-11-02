@@ -32,6 +32,12 @@ enable:
   build_natura_raster: false
   retrieve_natura_raster: false
   custom_busmap: false
+  cutouts_from_archive: false
+
+archive:
+  location_cutouts: "/home/pd423/export/pypsa-eur/cutouts/2022-07_001"
+
+
 
 electricity:
   voltages: [220., 300., 380.]

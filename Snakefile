@@ -166,6 +166,13 @@ if config['enable'].get('retrieve_cutout', True):
         output: "cutouts/{cutout}.nc"
         run: move(input[0], output[0])
 
+if config['enable'].get('cutouts_from_archive',False):
+    rule retrieve_cutout_from_archive:
+        input:  config['archive']['location_cutouts']+"/{cutout}.nc"
+        output: "cutouts/{cutout}.nc"
+        log: "logs/retrieve_from_archive/cutouts/{cutout}.log"
+        shell: "rsync -aP {input} {output} --log-file {log}"
+
 
 if config['enable'].get('build_natura_raster', False):
     rule build_natura_raster:
