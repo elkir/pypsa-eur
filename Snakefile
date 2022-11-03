@@ -114,10 +114,10 @@ rule build_load_data:
     output: 
        "resources/" + RDIR + "{year}/load.csv",
     log:
-    "logs/" + RDIR + "{year}/build_load_data.log",
+        "logs/" + RDIR + "{year}/build_load_data.log",
     resources:
         mem_mb=5000,
-    script: 'scripts/build_load_data.py'   #TODO weather depenedency
+    script: 'scripts/build_load_data.py'  #TODO weather depenedency
     
 
 rule build_powerplants:
