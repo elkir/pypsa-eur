@@ -1,13 +1,18 @@
-# SPDX-FileCopyrightText: : 2017-2020 The PyPSA-Eur Authors
+# SPDX-FileCopyrightText: : 2017-2022 The PyPSA-Eur Authors
 #
 # SPDX-License-Identifier: CC0-1.0
 
-version: 0.4.0
+version: 0.6.1
 tutorial: false
 
 logging:
   level: INFO
   format: '%(levelname)s:%(name)s:%(message)s'
+
+run:
+  name: "" # use this to keep track of runs with different settings
+  shared_cutouts: false # set to true to share the default cutout(s) across runs
+
 
 scenario:
   simpl: ['']
@@ -27,8 +32,9 @@ snapshots:
 enable:
   prepare_links_p_nom: false
   retrieve_databundle: true
+  retrieve_cost_data: true
   build_cutout: false
-  retrieve_cutout: false
+  retrieve_cutout: true
   build_natura_raster: false
   retrieve_natura_raster: true
   custom_busmap: false
@@ -58,7 +64,7 @@ electricity:
     Generator: [solar, onwind, offwind-ac, offwind-dc, OCGT]
     StorageUnit: [] # battery, H2
     Store: [battery, H2]
-    Link: [AC, DC]
+    Link: [] # H2 pipeline
 
   # use pandas query strings here, e.g. Country not in ['Germany']
   powerplants_filter: (DateOut >= 2022 or DateOut != DateOut)
@@ -115,7 +121,9 @@ renewable:
     resource:
       method: wind
       turbine: Vestas_V112_3MW
-    capacity_per_sqkm: 3 # ScholzPhd Tab 4.3.1: 10MW/km^2
+    capacity_per_sqkm: 3 # ScholzPhd Tab 4.3.1: 10MW/km^2 and assuming 30% fraction of the already restricted
+    # area is available for installation of wind generators due to competing land use and likely public
+    # acceptance issues.
     # correction_factor: 0.93
     corine:
       # Scholz, Y. (2012). Renewable energy based electricity supply at low costs:
@@ -125,6 +133,7 @@ renewable:
       distance: 1000
       distance_grid_codes: [1, 2, 3, 4, 5, 6]
     natura: true
+    excluder_resolution: 100
     potential: simple # or conservative
     clip_p_max_pu: 1.e-2
   offwind-ac:
@@ -132,15 +141,19 @@ renewable:
     resource:
       method: wind
       turbine: NREL_ReferenceTurbine_5MW_offshore
-    capacity_per_sqkm: 2
+    capacity_per_sqkm: 2 # ScholzPhd Tab 4.3.1: 10MW/km^2 and assuming 20% fraction of the already restricted
+    # area is available for installation of wind generators due to competing land use and likely public
+    # acceptance issues.
     correction_factor: 0.8855
     # proxy for wake losses
     # from 10.1016/j.energy.2018.08.153
     # until done more rigorously in #153
     corine: [44, 255]
     natura: true
+    ship_threshold: 400
     max_depth: 50
     max_shore_distance: 30000
+    excluder_resolution: 200
     potential: simple # or conservative
     clip_p_max_pu: 1.e-2
   offwind-dc:
@@ -148,16 +161,19 @@ renewable:
     resource:
       method: wind
       turbine: NREL_ReferenceTurbine_5MW_offshore
-    # ScholzPhd Tab 4.3.1: 10MW/km^2
-    capacity_per_sqkm: 2
+    capacity_per_sqkm: 2 # ScholzPhd Tab 4.3.1: 10MW/km^2 and assuming 20% fraction of the already restricted
+    # area is available for installation of wind generators due to competing land use and likely public
+    # acceptance issues.
     correction_factor: 0.8855
     # proxy for wake losses
     # from 10.1016/j.energy.2018.08.153
     # until done more rigorously in #153
     corine: [44, 255]
     natura: true
+    ship_threshold: 400
     max_depth: 50
     min_shore_distance: 30000
+    excluder_resolution: 200
     potential: simple # or conservative
     clip_p_max_pu: 1.e-2
   solar:
@@ -168,7 +184,7 @@ renewable:
       orientation:
         slope: 35.
         azimuth: 180.
-    capacity_per_sqkm: 1.7 # ScholzPhd Tab 4.3.1: 170 MW/km^2
+    capacity_per_sqkm: 1.7 # ScholzPhd Tab 4.3.1: 170 MW/km^2 and assuming 1% of the area can be used for solar PV panels
     # Correction factor determined by comparing uncorrected area-weighted full-load hours to those
     # published in Supplementary Data to
     # Pietzcker, Robert Carl, et al. "Using the sun to decarbonize the power
@@ -180,6 +196,7 @@ renewable:
     corine: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13,
              14, 15, 16, 17, 18, 19, 20, 26, 31, 32]
     natura: true
+    excluder_resolution: 100
     potential: simple # or conservative
     clip_p_max_pu: 1.e-2
   hydro:
@@ -215,7 +232,7 @@ transformers:
   type: ''
 
 load:
-  power_statistics: True # only for files from <2019; set false in order to get ENTSOE transparency data 
+  power_statistics: true # only for files from <2019; set false in order to get ENTSOE transparency data
   interpolate_limit: 3 # data gaps up until this size are interpolated linearly
   time_shift_for_large_gaps: 1w # data gaps up until this size are copied by copying from 
   manual_adjustments: true # false
@@ -223,9 +240,18 @@ load:
 
 costs:
   year: 2030
-  discountrate: 0.07 # From a Lion Hirth paper, also reflects average of Noothout et al 2016
-  USD2013_to_EUR2013: 0.7532 # [EUR/USD] ECB: https://www.ecb.europa.eu/stats/exchange/eurofxref/html/eurofxref-graph-usd.en.html
-  marginal_cost: # EUR/MWh
+  version: v0.4.0
+  rooftop_share: 0.14  # based on the potentials, assuming  (0.1 kW/m2 and 10 m2/person)
+  fill_values:
+    FOM: 0
+    VOM: 0
+    efficiency: 1
+    fuel: 0
+    investment: 0
+    lifetime: 25
+    "CO2 intensity": 0
+    "discount rate": 0.07
+  marginal_cost:
     solar: 0.01
     onwind: 0.015
     offwind: 0.015
@@ -243,9 +269,11 @@ clustering:
     to_substations: false # network is simplified to nodes with positive or negative power injection (i.e. substations or offwind connections)
     algorithm: kmeans # choose from: [hac, kmeans]
     feature: solar+onwind-time # only for hac. choose from: [solar+onwind-time, solar+onwind-cap, solar-time, solar-cap, solar+offwind-cap] etc.
+    exclude_carriers: []
   cluster_network:
     algorithm: kmeans
     feature: solar+onwind-time
+    exclude_carriers: []
   aggregation_strategies:
     generators:
       p_nom_max: sum # use "min" for more conservative assumptions
@@ -289,7 +317,7 @@ solving:
 plotting:
   map:
     figsize: [7, 7]
-    boundaries: [-10.2, 29, 35,  72]
+    boundaries: [-10.2, 29, 35, 72]
     p_nom:
       bus_size_factor: 5.e+4
       linewidth_factor: 3.e+3
