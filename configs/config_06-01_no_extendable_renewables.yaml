@@ -16,7 +16,7 @@ scenario:
   ll: ['copt']
   clusters: [37, '64m','128m'] # [37,'64m', '128m', '256m']
   opts: ['Co2L0.95-3H','Co2L0.95']
-  year: ['2013']
+  year: ['2018']
   chunk: ["1Y"] # ["1W","2W","1M","2M","3M","4M","6M","1Y"] 
 countries: ['AL', 'AT', 'BA', 'BE', 'BG', 'CH', 'CZ', 'DE', 'DK', 'EE', 'ES', 'FI', 'FR', 'GB', 'GR', 'HR', 'HU', 'IE', 'IT', 'LT', 'LU', 'LV', 'ME', 'MK', 'NL', 'NO', 'PL', 'PT', 'RO', 'RS', 'SE', 'SI', 'SK']
 
@@ -29,12 +29,12 @@ snapshots:
 enable:
   prepare_links_p_nom: false
   retrieve_databundle: true
-  build_cutout: false
+  build_cutout: true
   retrieve_cutout: false
   build_natura_raster: false
   retrieve_natura_raster: true
   custom_busmap: false
-  cutouts_from_archive: true
+  cutouts_from_archive: false
 
 electricity:
   voltages: [220., 300., 380.]
