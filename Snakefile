@@ -184,8 +184,8 @@ rule build_shapes:
 
 rule build_bus_regions:
     input:
-        country_shapes="resources/country_shapes.geojson",
-        offshore_shapes="resources/offshore_shapes.geojson",
+        country_shapes="resources/" + RDIR + "country_shapes.geojson",
+        offshore_shapes="resources/" + RDIR + "offshore_shapes.geojson",
         base_network="networks/" + RDIR + "{year}/base.nc"
     output:
         regions_onshore="resources/" + RDIR + "{year}/regions_onshore.geojson",
@@ -304,7 +304,7 @@ rule retrieve_ship_raster:
 rule build_ship_raster:
     input:
         ship_density="data/shipdensity_global.zip",
-        cutouts=expand("cutouts/" + CDIR + "{cutouts}.nc", **config["atlite"]),
+        cutouts=expand("cutouts/" + CDIR + "europe-{year}-era5.nc", **config["scenario"]),
     output:
         "resources/" + RDIR + "shipdensity_raster.nc",
     log:
